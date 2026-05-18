@@ -46,6 +46,18 @@ function segmentsIntersect(p1: any, p2: any, p3: any, p4: any): boolean {
   return ccw(p1, p3, p4) !== ccw(p2, p3, p4) && ccw(p1, p2, p3) !== ccw(p1, p2, p4);
 }
 
+function sharesEndpoint(p1: any, p2: any, p3: any, p4: any): boolean {
+  return (p1.x === p3.x && p1.y === p3.y) ||
+         (p1.x === p4.x && p1.y === p4.y) ||
+         (p2.x === p3.x && p2.y === p3.y) ||
+         (p2.x === p4.x && p2.y === p4.y);
+}
+
+function segmentsIntersectSafe(p1: any, p2: any, p3: any, p4: any): boolean {
+  if (sharesEndpoint(p1, p2, p3, p4)) return false;
+  return ccw(p1, p3, p4) !== ccw(p2, p3, p4) && ccw(p1, p2, p3) !== ccw(p1, p2, p4);
+}
+
 /**
  * 自定义 DrawTool，包装 maptalks DrawTool
  * 添加功能：在绘制面过程中检测自相交，如果出现自相交则回退到上一个点
@@ -240,11 +252,11 @@ export class SelfIntersectionDrawTool {
       const a1 = ring[i];
       const a2 = ring[(i + 1) % n];
 
-      for (let j = 2; j < n - 1; j++) {
+      for (let j = 2; j < n; j++) {
         if (Math.abs(i - j) <= 1) continue;
         if ((i === 0 && j === n - 1) || (j === 0 && i === n - 1)) continue;
 
-        if (segmentsIntersect(a1, a2, ring[j], ring[(j + 1) % n])) {
+        if (segmentsIntersectSafe(a1, a2, ring[j], ring[(j + 1) % n])) {
           return true;
         }
       }
