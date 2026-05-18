@@ -13,7 +13,6 @@ export default {
     {
       file: 'dist/maptalks-drawtool-selfintersect.esm.js',
       format: 'esm',
-      exports: 'named',
       sourcemap: true
     },
     {
@@ -23,7 +22,6 @@ export default {
       globals: {
         'maptalks': 'maptalks'
       },
-      exports: 'named',
       sourcemap: true
     }
   ],
