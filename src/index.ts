@@ -23,12 +23,14 @@ export interface SelfIntersectionDrawToolOptions {
   transformCoordinate?: any;
   /** 是否启用自相交检测，默认 false */
   enableSelfIntersectionCheck?: boolean;
-  /** 自相交时的提示消息，默认 "绘制面出现自相交，请重新绘制" */
+  /** 自相交时的提示消息 */
   selfIntersectionErrorMessage?: string;
-  /** 自相交检测到时的回调函数，可用于自定义提示UI */
+  /** 自相交检测到时的回调函数 */
   onSelfIntersectionError?: (message: string) => void;
   [key: string]: any;
 }
+
+const DEFAULT_ERROR_MESSAGE = '绘制面出现自相交，请重新绘制';
 
 /**
  * 自定义 DrawTool，包装 maptalks DrawTool
@@ -39,14 +41,33 @@ export class SelfIntersectionDrawTool {
   private _drawTool: any;
   options: SelfIntersectionDrawToolOptions;
   private _selfIntersectionHandler: any;
-  private _hasSelfIntersection: boolean = false;  // 标记当前绘制是否已自相交
+  private _hasSelfIntersection: boolean = false;
 
   constructor(options: SelfIntersectionDrawToolOptions) {
     const opts = Object.assign({}, { enableSelfIntersectionCheck: false }, options);
     this._drawTool = new maptalks.DrawTool(opts);
     this.options = this._drawTool.options;
     this._selfIntersectionHandler = this._checkSelfIntersection.bind(this);
-    this._hasSelfIntersection = false;
+  }
+
+  /**
+   * 触发警告
+   */
+  private _fireWarning(message: string): void {
+    this._drawTool._fireEvent('selfintersectionwarning', {
+      type: 'selfintersectionwarning',
+      message
+    });
+    if (typeof this.options.onSelfIntersectionError === 'function') {
+      this.options.onSelfIntersectionError(message);
+    }
+  }
+
+  /**
+   * 获取当前错误消息
+   */
+  private _getErrorMessage(defaultMsg: string): string {
+    return this.options.selfIntersectionErrorMessage || defaultMsg;
   }
 
   /**
@@ -65,70 +86,42 @@ export class SelfIntersectionDrawTool {
     }
   }
 
-  // ========== DrawTool 所有方法的代理 ==========
+  /**
+   * 绑定结束绘制拦截器
+   */
+  private _bindEndDrawInterceptor(): void {
+    // 开始新的绘制时重置状态
+    this._drawTool.on('drawprepare', () => {
+      this._hasSelfIntersection = false;
+    });
+
+    // 拦截双击
+    this._drawTool.on('dblclick', (param: any) => {
+      if (this._hasSelfIntersection) {
+        param.domEvent.stopPropagation();
+        param.domEvent.preventDefault();
+        this._fireWarning(this._getErrorMessage('绘制面存在自相交，请继续绘制'));
+      }
+    });
+
+    // 拦截绘制结束
+    this._drawTool.on('drawend', (param: any) => {
+      const geometry = param.geometry;
+      if (!geometry || !this._hasSelfIntersection) return;
+
+      geometry.remove();
+      this._hasSelfIntersection = false;
+      this._fireWarning(this._getErrorMessage('绘制面存在自相交，无法完成绘制，请继续绘制或按ESC取消'));
+    });
+  }
+
+  // ========== DrawTool 方法的代理 ==========
 
   addTo(map: any): this {
     this._drawTool.addTo(map);
     this._bindSelfIntersectionEvents();
     this._bindEndDrawInterceptor();
     return this;
-  }
-
-  /**
-   * 绑定结束绘制拦截器，防止双击结束自相交的多边形
-   */
-  private _bindEndDrawInterceptor(): void {
-    // 开始新的绘制时重置自相交标记
-    this._drawTool.on('drawprepare', () => {
-      this._hasSelfIntersection = false;
-    });
-
-    // 拦截双击结束
-    this._drawTool.on('dblclick', (param: any) => {
-      if (this._hasSelfIntersection) {
-        const errorMessage = this.options.selfIntersectionErrorMessage || '绘制面存在自相交，请继续绘制';
-
-        this._drawTool._fireEvent('selfintersectionwarning', {
-          type: 'selfintersectionwarning',
-          message: errorMessage
-        });
-
-        if (typeof this.options.onSelfIntersectionError === 'function') {
-          this.options.onSelfIntersectionError(errorMessage);
-        }
-
-        // 阻止双击结束绘制
-        param.domEvent.stopPropagation();
-        param.domEvent.preventDefault();
-        return false;
-      }
-    });
-
-    this._drawTool.on('drawend', (param: any) => {
-      const geometry = param.geometry;
-      if (!geometry) return;
-
-      // 如果当前绘制有自相交，不允许结束
-      if (this._hasSelfIntersection) {
-        const errorMessage = this.options.selfIntersectionErrorMessage || '绘制面存在自相交，无法完成绘制，请继续绘制或按ESC取消';
-
-        // 移除已添加到地图的几何图形
-        geometry.remove();
-
-        // 重置内部状态
-        this._hasSelfIntersection = false;
-
-        // 触发警告
-        this._drawTool._fireEvent('selfintersectionwarning', {
-          type: 'selfintersectionwarning',
-          message: errorMessage
-        });
-
-        if (typeof this.options.onSelfIntersectionError === 'function') {
-          this.options.onSelfIntersectionError(errorMessage);
-        }
-      }
-    });
   }
 
   getMode(): string {
@@ -211,10 +204,10 @@ export class SelfIntersectionDrawTool {
     return this;
   }
 
-  // ========== 自相交检测方法 ==========
+  // ========== 自相交检测 ==========
 
   /**
-   * 获取当前正在绘制的几何图形的坐标数组
+   * 获取当前坐标
    */
   getCurrentCoordinates(): any[] | null {
     const geometry = this.getCurrentGeometry();
@@ -223,28 +216,16 @@ export class SelfIntersectionDrawTool {
   }
 
   /**
-   * 检测 polygon 坐标数组是否自相交
-   * 使用线段相交检测算法（跨立实验）
-   * @param coordinates - polygon 的坐标数组
-   * @returns boolean - 是否自相交
+   * 检测 polygon 是否自相交
    */
   isSelfIntersecting(coordinates: any[]): boolean {
     if (!coordinates || coordinates.length === 0) return false;
 
-    // 获取坐标环
-    let ring = coordinates;
-    if (Array.isArray(coordinates[0])) {
-      if (typeof (coordinates[0] as any).x === 'number') {
-        ring = coordinates;
-      } else if (Array.isArray(coordinates[0][0])) {
-        ring = coordinates[0];
-      }
-    }
-
-    if (!Array.isArray(ring) || ring.length < 4) return false;
+    // 统一坐标环格式
+    const ring = this._getRingFromCoordinates(coordinates);
+    if (!ring || ring.length < 4) return false;
 
     const n = ring.length;
-
     for (let i = 0; i < n; i++) {
       const a1 = ring[i];
       const a2 = ring[(i + 1) % n];
@@ -253,10 +234,7 @@ export class SelfIntersectionDrawTool {
         if (Math.abs(i - j) <= 1) continue;
         if ((i === 0 && j === n - 1) || (j === 0 && i === n - 1)) continue;
 
-        const b1 = ring[j];
-        const b2 = ring[(j + 1) % n];
-
-        if (segmentsIntersect(a1, a2, b1, b2)) {
+        if (segmentsIntersect(a1, a2, ring[j], ring[(j + 1) % n])) {
           return true;
         }
       }
@@ -265,72 +243,62 @@ export class SelfIntersectionDrawTool {
   }
 
   /**
-   * 检测自相交并处理
+   * 从坐标中提取环
    */
-  private _checkSelfIntersection(event: any): void {
+  private _getRingFromCoordinates(coordinates: any[]): any[] | null {
+    if (!coordinates || !Array.isArray(coordinates)) return null;
+
+    // 已经是 [x,y], [x,y] 格式
+    if (typeof (coordinates[0] as any).x === 'number') {
+      return coordinates;
+    }
+
+    // 嵌套环格式 [[x,y], [x,y], ...]
+    if (Array.isArray(coordinates[0]) && Array.isArray(coordinates[0])) {
+      return coordinates[0];
+    }
+
+    return null;
+  }
+
+  /**
+   * 检测并处理自相交
+   */
+  private _checkSelfIntersection(): void {
     const coordinates = this.getCurrentCoordinates();
     if (!coordinates) return;
 
     if (this.isSelfIntersecting(coordinates)) {
-      const errorMessage = this.options.selfIntersectionErrorMessage || '绘制面出现自相交，请重新绘制';
-
-      // 直接操作内部状态移除最后一个点
       this._removeLastVertex();
-
-      // 标记当前绘制已自相交
       this._hasSelfIntersection = true;
-
-      // 触发警告事件
-      this._drawTool._fireEvent('selfintersectionwarning', {
-        type: 'selfintersectionwarning',
-        message: errorMessage
-      });
-
-      if (typeof this.options.onSelfIntersectionError === 'function') {
-        this.options.onSelfIntersectionError(errorMessage);
-      }
-    } else {
-      // 没有自相交，清除标记
-      if (this._hasSelfIntersection) {
-        this._hasSelfIntersection = false;
-      }
+      this._fireWarning(this._getErrorMessage(DEFAULT_ERROR_MESSAGE));
+    } else if (this._hasSelfIntersection) {
+      this._hasSelfIntersection = false;
     }
   }
 
   /**
-   * 直接从几何图形中移除最后一个顶点
+   * 移除最后一个顶点
    */
   private _removeLastVertex(): void {
     const geometry = this.getCurrentGeometry();
     if (!geometry) return;
 
-    // 获取 maptalks 内部坐标
     const coords = geometry.getCoordinates();
     if (!coords || coords.length === 0) return;
 
-    // 获取 _clickCoords
     const clickCoords = this._drawTool._clickCoords;
     if (!clickCoords || clickCoords.length === 0) return;
 
-    // 移除最后一个点击坐标
     clickCoords.pop();
-    // 重置历史指针
     this._drawTool._historyPointer = clickCoords.length;
 
-    // 移除几何图形的最后一个坐标
-    let ring;
-    if (Array.isArray(coords[0]) && typeof coords[0].x === 'number') {
-      ring = coords;
-    } else if (Array.isArray(coords[0]) && Array.isArray(coords[0])) {
-      ring = coords[0];
-    }
-
+    const ring = this._getRingFromCoordinates(coords);
     if (ring && ring.length > 0) {
       ring.pop();
       geometry.setCoordinates(coords);
     }
 
-    // 触发重绘
     const registerMode = this._drawTool._getRegisterMode();
     registerMode.update(this._drawTool.getMap().getProjection(), clickCoords, geometry);
   }
@@ -346,7 +314,7 @@ function segmentsIntersect(p1: any, p2: any, p3: any, p4: any): boolean {
   return ccw(p1, p3, p4) !== ccw(p2, p3, p4) && ccw(p1, p2, p3) !== ccw(p1, p2, p4);
 }
 
-// UMD 环境下直接暴露为 window.DrawToolCustom
+// UMD 环境下暴露为 window.DrawToolCustom
 if (typeof window !== 'undefined') {
   (window as any).DrawToolCustom = SelfIntersectionDrawTool;
 }

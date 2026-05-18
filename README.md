@@ -1,6 +1,13 @@
-# maptalks-drawtool-selfintersect
+# maptalks-drawtool-custom
 
-继承 maptalks DrawTool，添加在绘制面过程中检测自相交的功能。
+基于 maptalks DrawTool 的扩展插件，添加绘制面时自相交检测功能。
+
+## 功能特性
+
+- 绘制多边形时自动检测自相交
+- 检测到自相交时自动回退到上一个点
+- 阻止双击结束自相交的绘制
+- 自定义错误提示消息和 UI
 
 ## 安装
 
@@ -9,47 +16,222 @@ npm install
 npm run build
 ```
 
-## 使用方法
+## 使用方式
 
-```javascript
-import { SelfIntersectionDrawTool } from 'maptalks-drawtool-selfintersect';
-import DrawTool from 'maptalks';
+### 1. HTML script 标签引入（CDN）
 
-// 创建实例
-const drawTool = new SelfIntersectionDrawTool({
-  mode: 'polygon',
-  enableSelfIntersectionCheck: true  // 启用自相交检测
-}).addTo(map);
+```html
+<script src="https://cdn.jsdelivr.net/npm/maptalks@1.0.0/dist/maptalks.min.js"></script>
+<script src="./dist/maptalks-drawtool-custom.umd.js"></script>
 
-// 监听自相交警告事件
-drawTool.on('selfintersectionwarning', function(e) {
-  console.log(e.message); // '绘制面出现自相交，请重新绘制'
-  // 显示提示 UI
-});
-
-// 监听绘制完成
-drawTool.on('drawend', function(param) {
-  layer.addGeometry(param.geometry);
-});
+<script>
+    const drawTool = new DrawToolCustom({
+        mode: 'polygon',
+        enableSelfIntersectionCheck: true,
+        selfIntersectionErrorMessage: '多边形不能自相交',
+        onSelfIntersectionError: function(message) {
+            alert(message);
+        }
+    }).addTo(map);
+</script>
 ```
 
-## API
+### 2. ES Module 引入
 
-### SelfIntersectionDrawToolOptions
+```javascript
+import { SelfIntersectionDrawTool } from 'maptalks-drawtool-custom';
 
-继承自 `DrawToolOptions`，新增选项：
+const drawTool = new SelfIntersectionDrawTool({
+    mode: 'polygon',
+    enableSelfIntersectionCheck: true
+}).addTo(map);
+```
+
+### 3. CommonJS 引入
+
+```javascript
+const { SelfIntersectionDrawTool } = require('maptalks-drawtool-custom');
+
+const drawTool = new SelfIntersectionDrawTool({
+    mode: 'polygon',
+    enableSelfIntersectionCheck: true
+}).addTo(map);
+```
+
+## 配置选项
 
 | 选项 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
+| mode | string | null | 绘制模式：polygon, linestring, point 等 |
 | enableSelfIntersectionCheck | boolean | false | 是否启用自相交检测 |
+| selfIntersectionErrorMessage | string | '绘制面出现自相交，请重新绘制' | 自相交时的提示消息 |
+| onSelfIntersectionError | function | null | 自相交时的回调函数，可用于自定义提示 UI |
 
-### 方法
+其他选项继承自 [maptalks DrawTool](http://maptalks.org/maptalks.js/api/classes/draw.DrawTool.html)。
 
-#### `isSelfIntersecting(coordinates)`
-检测坐标数组是否自相交
+## 方法
 
-#### `getCurrentCoordinates()`
-获取当前正在绘制的几何图形的坐标数组
+| 方法 | 说明 |
+|------|------|
+| addTo(map) | 添加到地图 |
+| setMode(mode) | 设置绘制模式 |
+| getMode() | 获取当前模式 |
+| enable() | 启用绘制工具 |
+| disable() | 禁用绘制工具 |
+| undo() | 回退到上一个点 |
+| redo() | 重做 |
+| on(event, handler) | 绑定事件 |
+| off(event, handler) | 解绑事件 |
+| getCurrentGeometry() | 获取当前正在绘制的几何图形 |
+| getCurrentCoordinates() | 获取当前坐标数组 |
+| isSelfIntersecting(coordinates) | 检测坐标是否自相交 |
 
-#### `enableSelfIntersectionCheck`
-启用/禁用自相交检测
+## 事件
+
+| 事件 | 说明 |
+|------|------|
+| drawstart | 开始绘制 |
+| drawvertex | 添加顶点 |
+| drawend | 完成绘制 |
+| selfintersectionwarning | 检测到自相交时触发 |
+
+## 示例
+
+### 基础用法
+
+```javascript
+const drawTool = new DrawToolCustom({
+    mode: 'polygon',
+    enableSelfIntersectionCheck: true
+}).addTo(map);
+
+drawTool.on('drawend', function(param) {
+    console.log('绘制完成', param.geometry);
+});
+```
+
+### 自定义提示 UI
+
+```javascript
+const drawTool = new DrawToolCustom({
+    mode: 'polygon',
+    enableSelfIntersectionCheck: true,
+    selfIntersectionErrorMessage: '多边形不能自相交，请重新绘制',
+    onSelfIntersectionError: function(message) {
+        // 自定义提示样式
+        const toast = document.createElement('div');
+        toast.className = 'custom-toast';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2500);
+    }
+}).addTo(map);
+```
+
+### 监听警告事件
+
+```javascript
+const drawTool = new DrawToolCustom({
+    mode: 'polygon',
+    enableSelfIntersectionCheck: true
+}).addTo(map);
+
+drawTool.on('selfintersectionwarning', function(e) {
+    console.log('警告:', e.message);
+});
+```
+
+## 完整示例 HTML
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>DrawToolCustom 示例</title>
+    <script src="https://cdn.jsdelivr.net/npm/maptalks@1.0.0/dist/maptalks.min.js"></script>
+    <script src="./dist/maptalks-drawtool-custom.umd.js"></script>
+    <style>
+        #map { width: 100%; height: 100%; }
+        #message {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(220, 53, 69, 0.95);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 6px;
+            display: none;
+            z-index: 2000;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="message"></div>
+
+    <script>
+        const map = new maptalks.Map('map', {
+            center: [120.5, 31.3],
+            zoom: 10,
+            baseLayer: new maptalks.TileLayer('base', {
+                urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+            })
+        });
+
+        const layer = new maptalks.VectorLayer('v').addTo(map);
+
+        const drawTool = new DrawToolCustom({
+            mode: 'polygon',
+            symbol: {
+                lineColor: '#4a8af4',
+                lineWidth: 2,
+                polygonFill: '#4a8af4'
+            },
+            enableSelfIntersectionCheck: true,
+            selfIntersectionErrorMessage: '多边形不能自相交，请重新绘制',
+            onSelfIntersectionError: function(message) {
+                const el = document.getElementById('message');
+                el.textContent = message;
+                el.style.display = 'block';
+                setTimeout(() => el.style.display = 'none', 2500);
+            }
+        }).addTo(map);
+
+        drawTool.on('drawend', function(param) {
+            if (param.geometry) {
+                layer.addGeometry(param.geometry);
+            }
+        });
+    </script>
+</body>
+</html>
+```
+
+## 目录结构
+
+```
+├── dist/
+│   ├── maptalks-drawtool-custom.cjs.js   # CommonJS
+│   ├── maptalks-drawtool-custom.esm.js   # ES Module
+│   ├── maptalks-drawtool-custom.umd.js   # UMD (script标签用)
+│   └── index.d.ts                         # TypeScript 类型定义
+├── src/
+│   └── index.ts                          # 源代码
+├── package.json
+├── rollup.config.js
+└── tsconfig.json
+```
+
+## 构建
+
+```bash
+# 安装依赖
+npm install
+
+# 构建
+npm run build
+
+# 监听模式
+npm run dev
+```
