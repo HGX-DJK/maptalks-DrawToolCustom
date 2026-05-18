@@ -12,17 +12,40 @@
 ## 安装
 
 ```bash
-npm install
-npm run build
+npm install maptalks-drawtool-custom
 ```
 
 ## 使用方式
 
-### 1. HTML script 标签引入（CDN）
+### 1. npm 引入（ES Module / CommonJS）
+
+```bash
+npm install maptalks-drawtool-custom
+```
+
+```javascript
+// ES Module
+import { SelfIntersectionDrawTool } from 'maptalks-drawtool-custom';
+
+// CommonJS
+const { SelfIntersectionDrawTool } = require('maptalks-drawtool-custom');
+
+// 使用
+const drawTool = new SelfIntersectionDrawTool({
+    mode: 'polygon',
+    enableSelfIntersectionCheck: true,
+    selfIntersectionErrorMessage: '多边形不能自相交',
+    onSelfIntersectionError: function(message) {
+        alert(message);
+    }
+}).addTo(map);
+```
+
+### 2. CDN script 标签引入
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/maptalks@1.0.0/dist/maptalks.min.js"></script>
-<script src="./dist/maptalks-drawtool-custom.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/maptalks-drawtool-custom/dist/maptalks-drawtool-custom.umd.js"></script>
 
 <script>
     const drawTool = new DrawToolCustom({
@@ -34,28 +57,6 @@ npm run build
         }
     }).addTo(map);
 </script>
-```
-
-### 2. ES Module 引入
-
-```javascript
-import { SelfIntersectionDrawTool } from 'maptalks-drawtool-custom';
-
-const drawTool = new SelfIntersectionDrawTool({
-    mode: 'polygon',
-    enableSelfIntersectionCheck: true
-}).addTo(map);
-```
-
-### 3. CommonJS 引入
-
-```javascript
-const { SelfIntersectionDrawTool } = require('maptalks-drawtool-custom');
-
-const drawTool = new SelfIntersectionDrawTool({
-    mode: 'polygon',
-    enableSelfIntersectionCheck: true
-}).addTo(map);
 ```
 
 ## 配置选项
@@ -100,7 +101,7 @@ const drawTool = new SelfIntersectionDrawTool({
 ### 基础用法
 
 ```javascript
-const drawTool = new DrawToolCustom({
+const drawTool = new SelfIntersectionDrawTool({
     mode: 'polygon',
     enableSelfIntersectionCheck: true
 }).addTo(map);
@@ -113,7 +114,7 @@ drawTool.on('drawend', function(param) {
 ### 自定义提示 UI
 
 ```javascript
-const drawTool = new DrawToolCustom({
+const drawTool = new SelfIntersectionDrawTool({
     mode: 'polygon',
     enableSelfIntersectionCheck: true,
     selfIntersectionErrorMessage: '多边形不能自相交，请重新绘制',
@@ -131,7 +132,7 @@ const drawTool = new DrawToolCustom({
 ### 监听警告事件
 
 ```javascript
-const drawTool = new DrawToolCustom({
+const drawTool = new SelfIntersectionDrawTool({
     mode: 'polygon',
     enableSelfIntersectionCheck: true
 }).addTo(map);
@@ -148,9 +149,9 @@ drawTool.on('selfintersectionwarning', function(e) {
 <html>
 <head>
     <meta charset="utf-8">
-    <title>DrawToolCustom 示例</title>
+    <title>maptalks-drawtool-custom 示例</title>
     <script src="https://cdn.jsdelivr.net/npm/maptalks@1.0.0/dist/maptalks.min.js"></script>
-    <script src="./dist/maptalks-drawtool-custom.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/maptalks-drawtool-custom/dist/maptalks-drawtool-custom.umd.js"></script>
     <style>
         #map { width: 100%; height: 100%; }
         #message {
@@ -223,7 +224,7 @@ drawTool.on('selfintersectionwarning', function(e) {
 └── tsconfig.json
 ```
 
-## 构建
+## 本地构建
 
 ```bash
 # 安装依赖
