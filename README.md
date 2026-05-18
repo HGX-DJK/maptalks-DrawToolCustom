@@ -45,7 +45,7 @@ const drawTool = new SelfIntersectionDrawTool({
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/maptalks@1.0.0/dist/maptalks.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/maptalks-drawtool-custom/dist/maptalks-drawtool-custom.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/maptalks-drawtool-custom-v1/dist/maptalks-drawtool-custom.umd.js"></script>
 
 <script>
     const drawTool = new DrawToolCustom({
@@ -151,7 +151,7 @@ drawTool.on('selfintersectionwarning', function(e) {
     <meta charset="utf-8">
     <title>maptalks-drawtool-custom 示例</title>
     <script src="https://cdn.jsdelivr.net/npm/maptalks@1.0.0/dist/maptalks.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/maptalks-drawtool-custom/dist/maptalks-drawtool-custom.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/maptalks-drawtool-custom-v1/dist/maptalks-drawtool-custom.umd.js"></script>
     <style>
         #map { width: 100%; height: 100%; }
         #message {
