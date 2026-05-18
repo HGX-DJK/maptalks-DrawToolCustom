@@ -1,9 +1,9 @@
 {
-  "name": "maptalks-drawtool-custom-v1",
-  "version": "1.0.4",
+  "name": "maptalks-drawtool-customizable",
+  "version": "1.0.0",
   "description": "maptalks DrawTool extension with self-intersection detection for polygon drawing",
-  "main": "dist/maptalks-drawtool-custom.cjs.js",
-  "module": "dist/maptalks-drawtool-custom.esm.js",
+  "main": "dist/maptalks-drawtool-customizable.cjs.js",
+  "module": "dist/maptalks-drawtool-customizable.esm.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist"

@@ -307,9 +307,9 @@ export class SelfIntersectionDrawTool {
   }
 }
 
-// UMD 环境下暴露为 window.DrawToolCustom
+// UMD 环境下暴露为 window.DrawToolCustomizable
 if (typeof window !== 'undefined') {
-  (window as any).DrawToolCustom = SelfIntersectionDrawTool;
+  (window as any).DrawToolCustomizable = SelfIntersectionDrawTool;
 }
 
 export default SelfIntersectionDrawTool;

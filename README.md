@@ -1,4 +1,4 @@
-# maptalks-drawtool-custom
+# maptalks-drawtool-customizable
 
 基于 maptalks DrawTool 的扩展插件，添加绘制面时自相交检测功能。
 
@@ -12,7 +12,7 @@
 ## 安装
 
 ```bash
-npm install maptalks-drawtool-custom
+npm install maptalks-drawtool-customizable
 ```
 
 ## 使用方式
@@ -20,15 +20,15 @@ npm install maptalks-drawtool-custom
 ### 1. npm 引入（ES Module / CommonJS）
 
 ```bash
-npm install maptalks-drawtool-custom
+npm install maptalks-drawtool-customizable
 ```
 
 ```javascript
 // ES Module
-import { SelfIntersectionDrawTool } from 'maptalks-drawtool-custom';
+import { SelfIntersectionDrawTool } from 'maptalks-drawtool-customizable';
 
 // CommonJS
-const { SelfIntersectionDrawTool } = require('maptalks-drawtool-custom');
+const { SelfIntersectionDrawTool } = require('maptalks-drawtool-customizable');
 
 // 使用
 const drawTool = new SelfIntersectionDrawTool({
@@ -45,10 +45,10 @@ const drawTool = new SelfIntersectionDrawTool({
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/maptalks@1.0.0/dist/maptalks.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/maptalks-drawtool-custom-v1/dist/maptalks-drawtool-custom.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/maptalks-drawtool-customizable/dist/maptalks-drawtool-customizable.umd.js"></script>
 
 <script>
-    const drawTool = new DrawToolCustom({
+    const drawTool = new DrawToolCustomizable({
         mode: 'polygon',
         enableSelfIntersectionCheck: true,
         selfIntersectionErrorMessage: '多边形不能自相交',
@@ -149,9 +149,9 @@ drawTool.on('selfintersectionwarning', function(e) {
 <html>
 <head>
     <meta charset="utf-8">
-    <title>maptalks-drawtool-custom 示例</title>
+    <title>maptalks-drawtool-customizable 示例</title>
     <script src="https://cdn.jsdelivr.net/npm/maptalks@1.0.0/dist/maptalks.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/maptalks-drawtool-custom-v1/dist/maptalks-drawtool-custom.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/maptalks-drawtool-customizable/dist/maptalks-drawtool-customizable.umd.js"></script>
     <style>
         #map { width: 100%; height: 100%; }
         #message {
@@ -182,7 +182,7 @@ drawTool.on('selfintersectionwarning', function(e) {
 
         const layer = new maptalks.VectorLayer('v').addTo(map);
 
-        const drawTool = new DrawToolCustom({
+        const drawTool = new DrawToolCustomizable({
             mode: 'polygon',
             symbol: {
                 lineColor: '#4a8af4',
@@ -213,9 +213,9 @@ drawTool.on('selfintersectionwarning', function(e) {
 
 ```
 ├── dist/
-│   ├── maptalks-drawtool-custom.cjs.js   # CommonJS
-│   ├── maptalks-drawtool-custom.esm.js   # ES Module
-│   ├── maptalks-drawtool-custom.umd.js   # UMD (script标签用)
+│   ├── maptalks-drawtool-customizable.cjs.js   # CommonJS
+│   ├── maptalks-drawtool-customizable.esm.js   # ES Module
+│   ├── maptalks-drawtool-customizable.umd.js   # UMD (script标签用)
 │   └── index.d.ts                         # TypeScript 类型定义
 ├── src/
 │   └── index.ts                          # 源代码

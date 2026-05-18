@@ -5,20 +5,20 @@ export default {
   input: 'src/index.ts',
   output: [
     {
-      file: 'dist/maptalks-drawtool-custom.cjs.js',
+      file: 'dist/maptalks-drawtool-customizable.cjs.js',
       format: 'cjs',
       exports: 'named',
       sourcemap: true
     },
     {
-      file: 'dist/maptalks-drawtool-custom.esm.js',
+      file: 'dist/maptalks-drawtool-customizable.esm.js',
       format: 'esm',
       sourcemap: true
     },
     {
-      file: 'dist/maptalks-drawtool-custom.umd.js',
+      file: 'dist/maptalks-drawtool-customizable.umd.js',
       format: 'umd',
-      name: 'DrawToolCustom',
+      name: 'DrawToolCustomizable',
       globals: {
         'maptalks': 'maptalks'
       },
