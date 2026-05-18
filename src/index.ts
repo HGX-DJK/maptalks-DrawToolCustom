@@ -31,6 +31,20 @@ export interface SelfIntersectionDrawToolOptions {
 }
 
 const DEFAULT_ERROR_MESSAGE = '绘制面出现自相交，请重新绘制';
+const DBLCLICK_ERROR_MESSAGE = '绘制面存在自相交，请继续绘制';
+const DRAWEND_ERROR_MESSAGE = '绘制面存在自相交，无法完成绘制，请继续绘制或按ESC取消';
+
+/**
+ * 判断两条线段是否相交（跨立实验）
+ * ccw 函数提取到外层，避免每次调用重新创建
+ */
+function ccw(A: any, B: any, C: any): boolean {
+  return (C.y - A.y) * (B.x - A.x) > (B.y - A.y) * (C.x - A.x);
+}
+
+function segmentsIntersect(p1: any, p2: any, p3: any, p4: any): boolean {
+  return ccw(p1, p3, p4) !== ccw(p2, p3, p4) && ccw(p1, p2, p3) !== ccw(p1, p2, p4);
+}
 
 /**
  * 自定义 DrawTool，包装 maptalks DrawTool
@@ -54,13 +68,8 @@ export class SelfIntersectionDrawTool {
    * 触发警告
    */
   private _fireWarning(message: string): void {
-    this._drawTool._fireEvent('selfintersectionwarning', {
-      type: 'selfintersectionwarning',
-      message
-    });
-    if (typeof this.options.onSelfIntersectionError === 'function') {
-      this.options.onSelfIntersectionError(message);
-    }
+    this._drawTool._fireEvent('selfintersectionwarning', { type: 'selfintersectionwarning', message });
+    this.options.onSelfIntersectionError?.(message);
   }
 
   /**
@@ -71,14 +80,29 @@ export class SelfIntersectionDrawTool {
   }
 
   /**
+   * 从坐标中提取环
+   */
+  private _getRing(coordinates: any[]): any[] | null {
+    if (!coordinates || !Array.isArray(coordinates)) return null;
+
+    if (typeof (coordinates[0] as any).x === 'number') {
+      return coordinates;
+    }
+
+    if (Array.isArray(coordinates[0]) && Array.isArray(coordinates[0])) {
+      return coordinates[0];
+    }
+
+    return null;
+  }
+
+  /**
    * 绑定自相交检测事件
    */
   private _bindSelfIntersectionEvents(): void {
     this._drawTool.off('drawvertex', this._selfIntersectionHandler);
 
-    if (!this.options.enableSelfIntersectionCheck) {
-      return;
-    }
+    if (!this.options.enableSelfIntersectionCheck) return;
 
     const mode = this.getMode();
     if (mode === 'polygon' || mode === 'freeHandPolygon') {
@@ -90,28 +114,22 @@ export class SelfIntersectionDrawTool {
    * 绑定结束绘制拦截器
    */
   private _bindEndDrawInterceptor(): void {
-    // 开始新的绘制时重置状态
-    this._drawTool.on('drawprepare', () => {
-      this._hasSelfIntersection = false;
-    });
-
     // 拦截双击
     this._drawTool.on('dblclick', (param: any) => {
       if (this._hasSelfIntersection) {
         param.domEvent.stopPropagation();
         param.domEvent.preventDefault();
-        this._fireWarning(this._getErrorMessage('绘制面存在自相交，请继续绘制'));
+        this._fireWarning(this._getErrorMessage(DBLCLICK_ERROR_MESSAGE));
       }
     });
 
     // 拦截绘制结束
     this._drawTool.on('drawend', (param: any) => {
-      const geometry = param.geometry;
-      if (!geometry || !this._hasSelfIntersection) return;
+      if (!param.geometry || !this._hasSelfIntersection) return;
 
-      geometry.remove();
+      param.geometry.remove();
       this._hasSelfIntersection = false;
-      this._fireWarning(this._getErrorMessage('绘制面存在自相交，无法完成绘制，请继续绘制或按ESC取消'));
+      this._fireWarning(this._getErrorMessage(DRAWEND_ERROR_MESSAGE));
     });
   }
 
@@ -130,6 +148,7 @@ export class SelfIntersectionDrawTool {
 
   setMode(mode: string): this {
     this._drawTool.setMode(mode);
+    this._hasSelfIntersection = false;
     this._bindSelfIntersectionEvents();
     return this;
   }
@@ -206,23 +225,14 @@ export class SelfIntersectionDrawTool {
 
   // ========== 自相交检测 ==========
 
-  /**
-   * 获取当前坐标
-   */
   getCurrentCoordinates(): any[] | null {
-    const geometry = this.getCurrentGeometry();
-    if (!geometry) return null;
-    return geometry.getCoordinates() || null;
+    return this.getCurrentGeometry()?.getCoordinates() || null;
   }
 
-  /**
-   * 检测 polygon 是否自相交
-   */
   isSelfIntersecting(coordinates: any[]): boolean {
     if (!coordinates || coordinates.length === 0) return false;
 
-    // 统一坐标环格式
-    const ring = this._getRingFromCoordinates(coordinates);
+    const ring = this._getRing(coordinates);
     if (!ring || ring.length < 4) return false;
 
     const n = ring.length;
@@ -243,25 +253,6 @@ export class SelfIntersectionDrawTool {
   }
 
   /**
-   * 从坐标中提取环
-   */
-  private _getRingFromCoordinates(coordinates: any[]): any[] | null {
-    if (!coordinates || !Array.isArray(coordinates)) return null;
-
-    // 已经是 [x,y], [x,y] 格式
-    if (typeof (coordinates[0] as any).x === 'number') {
-      return coordinates;
-    }
-
-    // 嵌套环格式 [[x,y], [x,y], ...]
-    if (Array.isArray(coordinates[0]) && Array.isArray(coordinates[0])) {
-      return coordinates[0];
-    }
-
-    return null;
-  }
-
-  /**
    * 检测并处理自相交
    */
   private _checkSelfIntersection(): void {
@@ -272,7 +263,7 @@ export class SelfIntersectionDrawTool {
       this._removeLastVertex();
       this._hasSelfIntersection = true;
       this._fireWarning(this._getErrorMessage(DEFAULT_ERROR_MESSAGE));
-    } else if (this._hasSelfIntersection) {
+    } else {
       this._hasSelfIntersection = false;
     }
   }
@@ -293,8 +284,8 @@ export class SelfIntersectionDrawTool {
     clickCoords.pop();
     this._drawTool._historyPointer = clickCoords.length;
 
-    const ring = this._getRingFromCoordinates(coords);
-    if (ring && ring.length > 0) {
+    const ring = this._getRing(coords);
+    if (ring?.length) {
       ring.pop();
       geometry.setCoordinates(coords);
     }
@@ -302,16 +293,6 @@ export class SelfIntersectionDrawTool {
     const registerMode = this._drawTool._getRegisterMode();
     registerMode.update(this._drawTool.getMap().getProjection(), clickCoords, geometry);
   }
-}
-
-/**
- * 判断两条线段是否相交（跨立实验）
- */
-function segmentsIntersect(p1: any, p2: any, p3: any, p4: any): boolean {
-  function ccw(A: any, B: any, C: any): boolean {
-    return (C.y - A.y) * (B.x - A.x) > (B.y - A.y) * (C.x - A.x);
-  }
-  return ccw(p1, p3, p4) !== ccw(p2, p3, p4) && ccw(p1, p2, p3) !== ccw(p1, p2, p4);
 }
 
 // UMD 环境下暴露为 window.DrawToolCustom
