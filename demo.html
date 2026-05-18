@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>maptalks 自定义 DrawTool - 自相交检测</title>
+    <script src="https://cdn.jsdelivr.net/npm/maptalks@1.0.0/dist/maptalks.min.js"></script>
+    <script src="./dist/maptalks-drawtool-selfintersect.umd.js"></script>
+    <style>
+        html, body { margin: 0; height: 100%; padding: 0; }
+        #map { width: 100%; height: 100%; }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            z-index: 1000;
+            max-width: 300px;
+        }
+        #info h3 { margin: 0 0 10px 0; font-size: 16px; }
+        #info p { margin: 5px 0; color: #666; line-height: 1.4; }
+        .btn {
+            display: inline-block;
+            padding: 8px 14px;
+            margin: 4px 2px;
+            background: #4a90d9;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .btn:hover { background: #357abd; }
+        .btn.active { background: #2e7b32; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        /* 自定义提示样式 */
+        #custom-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            display: none;
+            z-index: 2000;
+            box-shadow: 0 4px 20px rgba(255, 107, 107, 0.5);
+            text-align: center;
+            max-width: 80%;
+        }
+        .test-hint {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        .test-hint strong { color: #d9534f; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="info">
+        <h3>绘制多边形 - 自相交检测</h3>
+        <button class="btn active" id="btnPolygon">绘制多边形</button>
+        <button class="btn" id="btnLine">绘制线</button>
+        <button class="btn" id="btnPoint">绘制点</button>
+        <button class="btn" id="btnClear">清除</button>
+
+        <div class="test-hint">
+            <strong>测试自相交：</strong><br>
+            1. 画3个点形成三角形<br>
+            2. 第4个点画到三角形内部<br>
+            3. 如果边产生交叉会自动回退
+        </div>
+    </div>
+    <div id="custom-message"></div>
+
+    <script>
+        const map = new maptalks.Map('map', {
+            center: [120.5, 31.3],
+            zoom: 12,
+            baseLayer: new maptalks.TileLayer('base', {
+                urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                subdomains: ['a', 'b', 'c']
+            })
+        });
+
+        const layer = new maptalks.VectorLayer('v').addTo(map);
+
+        const drawTool = new DrawToolCustom({
+            mode: 'polygon',
+            enableSelfIntersectionCheck: true,
+            // 自定义提示消息
+            selfIntersectionErrorMessage: '多边形不能自相交，请重新绘制',
+            // 自定义提示回调，可用于自定义UI
+            onSelfIntersectionError: function(message) {
+                const el = document.getElementById('custom-message');
+                el.textContent = message;
+                el.style.display = 'block';
+                setTimeout(() => { el.style.display = 'none'; }, 2500);
+            }
+        }).addTo(map);
+
+        // 监听绘制完成
+        drawTool.on('drawend', function(param) {
+            if (param.geometry) {
+                layer.addGeometry(param.geometry);
+            }
+        });
+
+        // 按钮事件
+        const btns = document.querySelectorAll('.btn');
+        btns.forEach(btn => {
+            if (btn.id !== 'btnClear') {
+                btn.onclick = function() {
+                    btns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    const mode = this.id === 'btnPolygon' ? 'polygon' :
+                                 this.id === 'btnLine' ? 'linestring' : 'point';
+                    drawTool.setMode(mode);
+                };
+            }
+        });
+
+        document.getElementById('btnClear').onclick = function() {
+            layer.clear();
+        };
+    </script>
+</body>
+</html>
