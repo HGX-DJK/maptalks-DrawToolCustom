@@ -8,7 +8,7 @@
     "build": "vite build"
   },
   "dependencies": {
-    "giser-maptalks-drawtool": "file:../../",
+    "giser-maptalks-drawtool": "^1.0.2",
     "maptalks-gl": "^0.124.4"
   },
   "devDependencies": {
