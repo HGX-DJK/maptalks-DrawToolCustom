@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>maptalks-DrawTool npm example</title>
+  <style>
+    * { margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; }
+    #map { width: 100%; height: 100%; }
+
+    #info {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 20px;
+      font-size: 13px;
+      z-index: 1000;
+    }
+
+    #controls {
+      position: absolute;
+      top: 80px;
+      left: 20px;
+      background: rgba(255,255,255,0.95);
+      padding: 12px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      z-index: 1000;
+    }
+
+    #controls button {
+      display: block;
+      width: 100%;
+      margin: 6px 0;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.2s;
+    }
+
+    #controls button:hover {
+      opacity: 0.9;
+    }
+
+    .btn-polygon { background: #4a8af4; color: #fff; }
+    .btn-freehand { background: #e74c3c; color: #fff; }
+    .btn-disable { background: #95a5a6; color: #fff; }
+
+    #log {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(0,0,0,0.85);
+      color: #0f0;
+      font-family: monospace;
+      font-size: 11px;
+      padding: 8px;
+      max-width: 400px;
+      max-height: 160px;
+      overflow: auto;
+      z-index: 1000;
+      border-radius: 4px;
+    }
+
+    #self-intersection-warning {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(231, 76, 60, 0.95);
+      color: #fff;
+      padding: 16px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      z-index: 2000;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+
+<body>
+<div id="map"></div>
+<div id="info">点击按钮开始绘制面 (启用自相交检测)</div>
+
+<div id="controls">
+  <button class="btn-polygon" data-action="draw" data-mode="polygon">绘制多边形</button>
+  <button class="btn-freehand" data-action="draw" data-mode="freeHandPolygon">手绘多边形</button>
+  <button class="btn-disable" data-action="disable">禁用绘制</button>
+</div>
+
+<div id="log"></div>
+<div id="self-intersection-warning"></div>
+
+<script type="module">
+ import * as maptalks from 'maptalks';
+  import { SelfIntersectionDrawTool } from 'giser-maptalks-drawtool';
+
+  const CONFIG = {
+    center: [121.473, 31.230],
+    zoom: 14
+  };
+
+  function log(msg) {
+    const el = document.getElementById('log');
+    const p = document.createElement('div');
+    p.textContent = '> ' + msg;
+    el.appendChild(p);
+    el.scrollTop = el.scrollHeight;
+    console.log(msg);
+  }
+
+  function showWarning(message) {
+    const el = document.getElementById('self-intersection-warning');
+    el.textContent = message;
+    el.style.display = 'block';
+    setTimeout(() => {
+      el.style.display = 'none';
+    }, 2500);
+  }
+
+  const map = new maptalks.Map("map", {
+    center: CONFIG.center,
+    zoom: CONFIG.zoom,
+    pitch: 0
+  });
+
+  const base = new maptalks.TileLayer('base', {
+    urlTemplate: 'https://webrd02.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',
+    subdomains: [1, 2, 3, 4]
+  });
+  map.setBaseLayer(base);
+
+  const vectorLayer = new maptalks.VectorLayer('vectors').addTo(map);
+
+  // 创建带有自相交检测功能的 DrawTool
+  const drawTool = new SelfIntersectionDrawTool({
+    mode: 'polygon',
+    symbol:{
+          lineColor:"#a6a6a6",
+          lineWidth:2,
+          polygonFill:"#4a8af4"
+      },
+    enableSelfIntersectionCheck: true,
+    selfIntersectionErrorMessage: '绘制面存在自相交，请重新绘制！',
+    onSelfIntersectionError: (message) => {
+      showWarning(message);
+      log('[警告] ' + message);
+    }
+  });
+
+  drawTool.addTo(map);
+
+  // 监听绘制完成事件
+  drawTool.on('drawend', (param) => {
+    if (param.geometry) {
+      vectorLayer.addGeometry(param.geometry);
+      log('绘制完成: ' + param.geometry.getCoordinates().length + ' 个顶点');
+    }
+  });
+
+  drawTool.on('selfintersectionwarning', (param) => {
+    log('[提示] ' + param.message);
+  });
+
+  log('DrawTool 初始化完成 (自相交检测已启用)');
+
+  // 事件委托处理按钮点击
+  document.getElementById('controls').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+
+    const action = btn.dataset.action;
+    const mode = btn.dataset.mode;
+
+    if (action === 'draw' && mode) {
+      drawTool.setMode(mode).enable();
+      log('开始绘制: ' + mode);
+    } else if (action === 'disable') {
+      drawTool.disable();
+      log('绘制已禁用');
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,9 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-/**
- * 声明 maptalks 全局变量（UMD 模式下）
- */
-declare const maptalks: any;
+import * as maptalks from 'maptalks';
 
 /**
  * 自定义 DrawTool 选项

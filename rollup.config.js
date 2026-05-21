@@ -20,14 +20,15 @@ export default {
       format: 'umd',
       name: 'giserMaptalksDrawTool',
       globals: {
-        'maptalks': 'maptalks'
+        'maptalks': 'maptalks',
+        'maptalks-gl': 'maptalks'
       },
       sourcemap: true
     }
   ],
   plugins: [
     resolve({
-      resolveOnly: ['maptalks']
+      resolveOnly: []
     }),
     typescript({
       tsconfig: './tsconfig.json',
@@ -35,5 +36,5 @@ export default {
       declarationDir: 'dist'
     })
   ],
-  external: ['maptalks']
+  external: ['maptalks', 'maptalks-gl']
 };
