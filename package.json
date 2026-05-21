@@ -1,9 +1,9 @@
 {
-  "name": "maptalks-drawtool-customizable",
-  "version": "1.0.0",
+  "name": "giser-maptalks-drawtool",
+  "version": "1.0.1",
   "description": "maptalks DrawTool extension with self-intersection detection for polygon drawing",
-  "main": "dist/maptalks-drawtool-customizable.cjs.js",
-  "module": "dist/maptalks-drawtool-customizable.esm.js",
+  "main": "dist/giser-maptalks-drawtool.cjs.js",
+  "module": "dist/giser-maptalks-drawtool.esm.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist"

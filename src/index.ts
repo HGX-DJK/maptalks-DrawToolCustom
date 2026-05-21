@@ -307,9 +307,9 @@ export class SelfIntersectionDrawTool {
   }
 }
 
-// UMD 环境下暴露为 window.DrawToolCustomizable
+// UMD 环境下暴露为 window.giserMaptalksDrawTool
 if (typeof window !== 'undefined') {
-  (window as any).DrawToolCustomizable = SelfIntersectionDrawTool;
+  (window as any).giserMaptalksDrawTool = SelfIntersectionDrawTool;
 }
 
 export default SelfIntersectionDrawTool;

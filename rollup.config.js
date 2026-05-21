@@ -5,20 +5,20 @@ export default {
   input: 'src/index.ts',
   output: [
     {
-      file: 'dist/maptalks-drawtool-customizable.cjs.js',
+      file: 'dist/giser-maptalks-drawtool.cjs.js',
       format: 'cjs',
       exports: 'named',
       sourcemap: true
     },
     {
-      file: 'dist/maptalks-drawtool-customizable.esm.js',
+      file: 'dist/giser-maptalks-drawtool.esm.js',
       format: 'esm',
       sourcemap: true
     },
     {
-      file: 'dist/maptalks-drawtool-customizable.umd.js',
+      file: 'dist/giser-maptalks-drawtool.umd.js',
       format: 'umd',
-      name: 'DrawToolCustomizable',
+      name: 'giserMaptalksDrawTool',
       globals: {
         'maptalks': 'maptalks'
       },
