@@ -19,6 +19,7 @@ export default {
       file: 'dist/giser-maptalks-drawtool.umd.js',
       format: 'umd',
       name: 'giserMaptalksDrawTool',
+      exports: 'named',
       globals: {
         'maptalks': 'maptalks',
         'maptalks-gl': 'maptalks'

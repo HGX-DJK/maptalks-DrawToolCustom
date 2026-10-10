@@ -75,7 +75,8 @@ const drawTool = new SelfIntersectionDrawTool({
 | 方法 | 说明 |
 |------|------|
 | addTo(map) | 添加到地图 |
-| setMode(mode) | 设置绘制模式 |
+| remove() | 从地图注销并销毁工具 |
+| setMode(mode) | 设置绘制模式 (polygon, freeHandPolygon, linestring 等) |
 | getMode() | 获取当前模式 |
 | enable() | 启用绘制工具 |
 | disable() | 禁用绘制工具 |

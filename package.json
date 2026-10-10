@@ -5,12 +5,21 @@
   "main": "dist/giser-maptalks-drawtool.cjs.js",
   "module": "dist/giser-maptalks-drawtool.esm.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/giser-maptalks-drawtool.esm.js",
+      "require": "./dist/giser-maptalks-drawtool.cjs.js",
+      "default": "./dist/giser-maptalks-drawtool.esm.js"
+    }
+  },
   "files": [
     "dist"
   ],
   "scripts": {
     "build": "rollup -c",
-    "dev": "rollup -c -w"
+    "dev": "rollup -c -w",
+    "test": "node test/intersection.test.js"
   },
   "keywords": [
     "maptalks",
