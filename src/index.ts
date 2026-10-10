@@ -36,8 +36,8 @@ export interface SelfIntersectionDrawToolOptions {
   [key: string]: any;
 }
 
-const DEFAULT_ERROR_MESSAGE = '绘制面出现自相交，请重新绘制';
-const DRAWEND_ERROR_MESSAGE = '绘制面存在自相交，无法完成绘制，请继续调整或按ESC取消';
+const DEFAULT_ERROR_MESSAGE = '出现自相交，已自动回退到上一个点';
+const DRAWEND_ERROR_MESSAGE = '存在自相交，无法完成绘制，请继续调整或按ESC取消';
 const EPSILON = 1e-9;
 
 /**
@@ -267,7 +267,9 @@ export class SelfIntersectionDrawTool extends maptalks.DrawTool {
    * 判断当前模式是否支持检测
    */
   private _isSupportedMode(mode: string): boolean {
-    return mode === 'polygon' || mode === 'freeHandPolygon' || mode === 'linestring';
+    if (!mode) return false;
+    const m = mode.toLowerCase();
+    return m === 'polygon' || m === 'freehandpolygon' || m === 'linestring';
   }
 
   /**
@@ -314,7 +316,7 @@ export class SelfIntersectionDrawTool extends maptalks.DrawTool {
     const ring = this._getRing(coordinates);
     if (!ring || ring.length < 4) return false;
 
-    const mode = this.getMode();
+    const mode = (this.getMode() || '').toLowerCase();
     if (mode === 'linestring') {
       return checkPolylineSelfIntersection(ring);
     }

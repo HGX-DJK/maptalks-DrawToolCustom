@@ -93,6 +93,14 @@ console.log('🧪 开始运行自动化单元测试...');
   ];
   assert.strictEqual(checkPolylineSelfIntersection(lineCross), true, '测试 3.2 失败: 交叉折线应判定为自相交');
 
+  // 测试 DrawTool 实例在 linestring 模式下的 isSelfIntersecting
+  const drawToolLine = new SelfIntersectionDrawTool({
+    mode: 'linestring',
+    enableSelfIntersectionCheck: true
+  });
+  assert.strictEqual(drawToolLine.isSelfIntersecting(lineCross), true, '测试 3.3 失败: DrawTool 在 linestring 模式下应判定交叉');
+  assert.strictEqual(drawToolLine.isSelfIntersecting(lineSafe), false, '测试 3.4 失败: DrawTool 在 linestring 模式下不应误报');
+
   console.log('  ✅ 3. 折线自相交检测测试通过');
 }
 

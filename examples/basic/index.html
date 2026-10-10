@@ -49,8 +49,9 @@
     }
 
     .btn-polygon { background: #4a8af4; color: #fff; }
-    .btn-freehand { background: #e74c3c; color: #fff; }
-    .btn-disable { background: #95a5a6; color: #fff; }
+    .btn-line { background: #27ae60; color: #fff; }
+    .btn-clear { background: #e74c3c; color: #fff; }
+    .btn-disable { background: #7f8c8d; color: #fff; }
 
     #log {
       position: absolute;
@@ -87,11 +88,12 @@
 
 <body>
 <div id="map"></div>
-<div id="info">点击按钮开始绘制面 (启用自相交检测)</div>
+<div id="info">点击左侧按钮开始绘制 (启用自相交检测)</div>
 
 <div id="controls">
-  <button class="btn-polygon" data-action="draw" data-mode="polygon">绘制多边形</button>
-  <button class="btn-freehand" data-action="draw" data-mode="freeHandPolygon">手绘多边形</button>
+  <button class="btn-polygon" data-action="draw" data-mode="polygon">绘制多边形 (单击加点，双击结束)</button>
+  <button class="btn-line" data-action="draw" data-mode="linestring">绘制折线 (单击加点，双击结束)</button>
+  <button class="btn-clear" data-action="clear">清空图层</button>
   <button class="btn-disable" data-action="disable">禁用绘制</button>
 </div>
 
@@ -132,8 +134,8 @@
   });
 
   const base = new maptalks.TileLayer('base', {
-    urlTemplate: 'https://webrd02.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',
-    subdomains: [1, 2, 3, 4]
+    urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    subdomains: ['a', 'b', 'c']
   });
   map.setBaseLayer(base);
 
@@ -171,6 +173,12 @@
 
   log('DrawTool 初始化完成 (自相交检测已启用)');
 
+  const infoEl = document.getElementById('info');
+  const modeTips = {
+    polygon: '当前模式：多边形绘制 —— 单击地图落点，双击结束（自相交自动回退）',
+    linestring: '当前模式：折线绘制 —— 单击地图落点，双击结束（自相交自动回退）'
+  };
+
   // 事件委托处理按钮点击
   document.getElementById('controls').addEventListener('click', (e) => {
     const btn = e.target.closest('button');
@@ -181,9 +189,14 @@
 
     if (action === 'draw' && mode) {
       drawTool.setMode(mode).enable();
+      infoEl.textContent = modeTips[mode] || ('开始绘制: ' + mode);
       log('开始绘制: ' + mode);
+    } else if (action === 'clear') {
+      vectorLayer.clear();
+      log('图层已清空');
     } else if (action === 'disable') {
       drawTool.disable();
+      infoEl.textContent = '绘制已禁用，点击左侧按钮开始绘制';
       log('绘制已禁用');
     }
   });
