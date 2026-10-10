@@ -174,6 +174,99 @@ export function checkPolylineSelfIntersection(points: Point2D[]): boolean {
 }
 
 /**
+ * 统一解析并归一化各种格式的几何对象或坐标数据
+ * 支持：GeoJSON Feature / Geometry、maptalks Geometry、原生 [x, y] 数组或 Coordinate 结构
+ */
+export function normalizeCoordinates(
+  input: any,
+  defaultMode: string = 'polygon'
+): { points: Point2D[]; mode: string } | null {
+  if (!input) return null;
+  let target = input;
+  let mode = (defaultMode || 'polygon').toLowerCase();
+
+  // 1. GeoJSON Feature
+  if (target.type === 'Feature' && target.geometry) {
+    target = target.geometry;
+  }
+
+  // 2. GeoJSON Geometry
+  if (target.type && target.coordinates) {
+    const geoType = String(target.type).toLowerCase();
+    if (geoType === 'polygon') {
+      mode = 'polygon';
+      target = target.coordinates[0];
+    } else if (geoType === 'linestring') {
+      mode = 'linestring';
+      target = target.coordinates;
+    } else if (geoType === 'multipolygon' && Array.isArray(target.coordinates[0])) {
+      mode = 'polygon';
+      target = target.coordinates[0][0];
+    }
+  }
+
+  // 3. maptalks.Geometry 实例
+  if (typeof target.getCoordinates === 'function') {
+    if (typeof target.getType === 'function') {
+      const gType = String(target.getType()).toLowerCase();
+      if (gType.indexOf('line') > -1) mode = 'linestring';
+      if (gType.indexOf('polygon') > -1) mode = 'polygon';
+    }
+    target = target.getCoordinates();
+  }
+
+  // 4. 嵌套数组降维解包
+  while (Array.isArray(target) && target.length > 0 && Array.isArray(target[0])) {
+    if (
+      typeof target[0][0] === 'number' &&
+      target[0].length >= 2 &&
+      typeof target[0][1] === 'number'
+    ) {
+      break;
+    }
+    target = target[0];
+  }
+
+  if (!Array.isArray(target) || target.length === 0) return null;
+
+  // 5. 映射为标准 Point2D 数组
+  const points: Point2D[] = [];
+  for (let i = 0; i < target.length; i++) {
+    const p = target[i];
+    if (Array.isArray(p) && typeof p[0] === 'number' && typeof p[1] === 'number') {
+      points.push({ x: p[0], y: p[1] });
+    } else if (p && typeof p.x === 'number' && typeof p.y === 'number') {
+      points.push({ x: p.x, y: p.y });
+    }
+  }
+
+  if (points.length === 0) return null;
+
+  return { points, mode };
+}
+
+/**
+ * 静态自相交检测纯函数
+ * 供纯数据校验、GeoJSON 校验或表单校验直接调用，无需实例化地图工具
+ * @param geometryOrCoordinates GeoJSON、maptalks Geometry 或坐标数组
+ * @param mode 绘制或几何类型：'polygon' (默认) 或 'linestring'
+ * @returns boolean 是否自相交
+ */
+export function isSelfIntersecting(
+  geometryOrCoordinates: any,
+  mode?: string
+): boolean {
+  const result = normalizeCoordinates(geometryOrCoordinates, mode || 'polygon');
+  if (!result || result.points.length < 4) return false;
+
+  const resolvedMode = (mode || result.mode).toLowerCase();
+  if (resolvedMode === 'linestring') {
+    return checkPolylineSelfIntersection(result.points);
+  }
+  return checkRingSelfIntersection(result.points);
+}
+
+/**
  * 带自相交检测的 DrawTool
  * 继承自 maptalks.DrawTool，天然具备所有原生方法（如 remove, on, off, once, fire, undo 等）与生命周期管理
  */
@@ -181,6 +274,26 @@ export class SelfIntersectionDrawTool extends maptalks.DrawTool {
   declare options: SelfIntersectionDrawToolOptions;
   private _selfIntersectionHandler: (param: any) => void;
   private _eventsBound: boolean = false;
+
+  /**
+   * 静态工具方法：直接检测指定几何对象或坐标是否自相交（无需初始化地图实例）
+   */
+  public static isSelfIntersecting(
+    geometryOrCoordinates: any,
+    mode?: string
+  ): boolean {
+    return isSelfIntersecting(geometryOrCoordinates, mode);
+  }
+
+  /**
+   * 静态工具方法：归一化坐标结构
+   */
+  public static normalizeCoordinates(
+    input: any,
+    defaultMode?: string
+  ): { points: Point2D[]; mode: string } | null {
+    return normalizeCoordinates(input, defaultMode);
+  }
 
   constructor(options?: SelfIntersectionDrawToolOptions) {
     const opts = Object.assign({ enableSelfIntersectionCheck: false }, options);
@@ -206,33 +319,6 @@ export class SelfIntersectionDrawTool extends maptalks.DrawTool {
    */
   private _getErrorMessage(defaultMsg: string): string {
     return this.options?.selfIntersectionErrorMessage || defaultMsg;
-  }
-
-  /**
-   * 统一从坐标结构中提取顶点数组
-   */
-  private _getRing(coordinates: any): Point2D[] | null {
-    if (!coordinates || !Array.isArray(coordinates) || coordinates.length === 0) {
-      return null;
-    }
-
-    // 单环或点列表：[{x, y}, ...]
-    if (typeof (coordinates[0] as any)?.x === 'number') {
-      return coordinates as Point2D[];
-    }
-
-    // 嵌套多边形环结构：[[{x, y}, ...]]
-    if (Array.isArray(coordinates[0]) && coordinates[0].length > 0) {
-      if (typeof (coordinates[0][0] as any)?.x === 'number') {
-        return coordinates[0] as Point2D[];
-      }
-      // 数组形式：[[x, y], [x, y], ...]
-      if (typeof coordinates[0][0] === 'number') {
-        return (coordinates as number[][]).map(([x, y]) => ({ x, y }));
-      }
-    }
-
-    return null;
   }
 
   /**
@@ -310,17 +396,14 @@ export class SelfIntersectionDrawTool extends maptalks.DrawTool {
   }
 
   /**
-   * 判断指定坐标是否发生自相交（供外部直接调用）
+   * 实例方法：判断当前工具中或外部传入的几何数据是否发生自相交
+   * @param geometryOrCoordinates 可选，默认检测当前绘制中的 Geometry 坐标
    */
-  isSelfIntersecting(coordinates: any[]): boolean {
-    const ring = this._getRing(coordinates);
-    if (!ring || ring.length < 4) return false;
-
-    const mode = (this.getMode() || '').toLowerCase();
-    if (mode === 'linestring') {
-      return checkPolylineSelfIntersection(ring);
-    }
-    return checkRingSelfIntersection(ring);
+  isSelfIntersecting(geometryOrCoordinates?: any): boolean {
+    const target = geometryOrCoordinates !== undefined
+      ? geometryOrCoordinates
+      : this.getCurrentCoordinates();
+    return isSelfIntersecting(target, this.getMode());
   }
 
   /**
@@ -356,8 +439,11 @@ export class SelfIntersectionDrawTool extends maptalks.DrawTool {
   }
 }
 
+// 挂载命名空间与静态工具方法
 (SelfIntersectionDrawTool as any).SelfIntersectionDrawTool = SelfIntersectionDrawTool;
 (SelfIntersectionDrawTool as any).default = SelfIntersectionDrawTool;
+(SelfIntersectionDrawTool as any).isSelfIntersecting = isSelfIntersecting;
+(SelfIntersectionDrawTool as any).normalizeCoordinates = normalizeCoordinates;
 (SelfIntersectionDrawTool as any).segmentsIntersect = segmentsIntersect;
 (SelfIntersectionDrawTool as any).checkRingSelfIntersection = checkRingSelfIntersection;
 (SelfIntersectionDrawTool as any).checkPolylineSelfIntersection = checkPolylineSelfIntersection;

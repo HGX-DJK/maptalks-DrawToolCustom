@@ -5,40 +5,128 @@
     <title>maptalks 自定义 DrawTool - 自相交检测</title>
     <link rel='stylesheet' href='https://maptalks.com/api/maptalks-gl.css' />
     <script src="https://cdn.jsdelivr.net/npm/maptalks@1.0.0/dist/maptalks.min.js"></script>
-   <script src="./dist/giser-maptalks-drawtool.umd.js"></script>
+    <script src="./dist/giser-maptalks-drawtool.umd.js"></script>
     <style>
-        html, body { margin: 0; height: 100%; padding: 0; }
+        html, body { margin: 0; height: 100%; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
         #map { width: 100%; height: 100%; }
+        
+        /* 左侧绘制控制面板 */
         #info {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            background: white;
-            padding: 15px;
-            border-radius: 4px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-            font-family: Arial, sans-serif;
+            top: 15px;
+            left: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
             font-size: 14px;
             z-index: 1000;
-            max-width: 300px;
+            max-width: 320px;
+            backdrop-filter: blur(4px);
         }
-        #info h3 { margin: 0 0 10px 0; font-size: 16px; }
+        #info h3 { margin: 0 0 10px 0; font-size: 16px; color: #2c3e50; }
         #info p { margin: 5px 0; color: #666; line-height: 1.4; }
+        
+        /* 右侧静态脱机检测测试面板 */
+        #static-panel {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            font-size: 13px;
+            z-index: 1000;
+            width: 340px;
+            max-height: calc(100vh - 50px);
+            overflow-y: auto;
+            backdrop-filter: blur(4px);
+        }
+        #static-panel h3 { margin: 0 0 8px 0; font-size: 15px; color: #2c3e50; }
+        #static-panel p { margin: 0 0 10px 0; color: #7f8c8d; font-size: 12px; }
+
         .btn {
             display: inline-block;
-            padding: 8px 14px;
-            margin: 4px 2px;
+            padding: 7px 13px;
+            margin: 3px 2px;
             background: #4a90d9;
             color: white;
             border: none;
-            border-radius: 3px;
+            border-radius: 4px;
             cursor: pointer;
             font-size: 13px;
+            transition: all 0.2s;
         }
         .btn:hover { background: #357abd; }
-        .btn.active { background: #2e7b32; }
-        .btn:disabled { background: #ccc; cursor: not-allowed; }
-        /* 自定义提示样式 */
+        .btn.active { background: #27ae60; font-weight: bold; }
+        .btn-clear { background: #e74c3c; }
+        .btn-clear:hover { background: #c0392b; }
+        
+        .preset-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+        .small-btn {
+            padding: 4px 8px;
+            background: #ecf0f1;
+            border: 1px solid #bdc3c7;
+            border-radius: 3px;
+            font-size: 12px;
+            cursor: pointer;
+            color: #2c3e50;
+            transition: all 0.2s;
+        }
+        .small-btn:hover { background: #d5dbdb; }
+        .small-btn.active {
+            background: #2c3e50;
+            color: #ffffff;
+            border-color: #2c3e50;
+            font-weight: bold;
+        }
+
+        #staticInput {
+            width: 100%;
+            height: 110px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 8px;
+            font-family: monospace;
+            font-size: 11px;
+            resize: vertical;
+            background: #fafafa;
+        }
+        #staticInput:focus {
+            outline: none;
+            border-color: #4a90d9;
+            background: #fff;
+        }
+
+        .result-box {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+            display: none;
+        }
+        .result-box.valid {
+            display: block;
+            background: #e8f8f5;
+            color: #27ae60;
+            border: 1px solid #a3e4d7;
+        }
+        .result-box.invalid {
+            display: block;
+            background: #fdedec;
+            color: #e74c3c;
+            border: 1px solid #fadbd8;
+        }
+
+        /* 屏幕中央警告浮窗 */
         #custom-message {
             position: absolute;
             top: 50%;
@@ -46,42 +134,65 @@
             transform: translate(-50%, -50%);
             background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
             color: white;
-            padding: 15px 30px;
+            padding: 14px 28px;
             border-radius: 8px;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: bold;
             display: none;
             z-index: 2000;
             box-shadow: 0 4px 20px rgba(255, 107, 107, 0.5);
             text-align: center;
-            max-width: 80%;
         }
         .test-hint {
-            background: #f5f5f5;
-            padding: 10px;
-            border-radius: 4px;
+            background: #f8f9fa;
+            border-left: 3px solid #4a90d9;
+            padding: 8px 10px;
             margin-top: 10px;
             font-size: 12px;
+            line-height: 1.5;
+            color: #555;
         }
-        .test-hint strong { color: #d9534f; }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <div id="info">
-        <h3>绘制多边形 - 自相交检测</h3>
-        <button class="btn active" id="btnPolygon">绘制多边形</button>
-        <button class="btn" id="btnLine">绘制线</button>
-        <button class="btn" id="btnPoint">绘制点</button>
-        <button class="btn" id="btnClear">清除</button>
 
-        <div class="test-hint">
-            <strong>测试自相交：</strong><br>
-            1. 画3个点形成三角形<br>
-            2. 第4个点画到三角形内部<br>
-            3. 如果边产生交叉会自动回退
+    <!-- 1. 地图交互绘制面板 -->
+    <div id="info">
+        <h3>绘制工具交互测试</h3>
+        <button class="btn active" id="btnPolygon">绘制多边形</button>
+        <button class="btn" id="btnLine">绘制折线</button>
+        <button class="btn" id="btnPoint">绘制点</button>
+        <button class="btn btn-clear" id="btnClear">清空图层</button>
+
+        <div class="test-hint" id="modeHint">
+            <strong>多边形自相交测试：</strong><br>
+            单击落点，画3个点成三角，第4个点若穿过前边会自动回退并提示；双击完成闭合。
         </div>
     </div>
+
+    <!-- 2. 静态数据脱机检测面板 -->
+    <div id="static-panel">
+        <h3>🛠️ 静态工具脱机检测测试</h3>
+        <p>脱离地图实例，校验纯坐标或 GeoJSON（适合表单/导入校验）：</p>
+
+        <div class="preset-bar">
+            <button class="small-btn active" id="btnPresetValid">合法多边形</button>
+            <button class="small-btn" id="btnPresetBowtie">沙漏形自相交面</button>
+            <button class="small-btn" id="btnPresetCrossLine">交叉自相交折线</button>
+            <button class="small-btn" id="btnPresetGeoJSON">GeoJSON 数据</button>
+        </div>
+
+        <textarea id="staticInput" spellcheck="false" placeholder="在此粘贴坐标数组或 GeoJSON..."></textarea>
+
+        <div style="margin-top: 8px;">
+            <button class="btn" id="btnRunStaticCheck">执行静态检测</button>
+            <button class="btn" id="btnPreviewOnMap" style="background:#8e44ad;">在地图预览此数据</button>
+        </div>
+
+        <div id="staticResult" class="result-box"></div>
+    </div>
+
     <div id="custom-message"></div>
 
     <script>
@@ -96,17 +207,17 @@
 
         const layer = new maptalks.VectorLayer('v').addTo(map);
 
+        // 创建自定义带有自相交检测的 DrawTool
         const drawTool = new giserMaptalksDrawTool({
             mode: 'polygon',
-            symbol:{
-                lineColor:"#a6a6a6",
-                lineWidth:2,
-                polygonFill:"#4a8af4"
+            symbol: {
+                lineColor: "#4a90d9",
+                lineWidth: 2,
+                polygonFill: "#4a8af4",
+                polygonOpacity: 0.3
             },
             enableSelfIntersectionCheck: true,
-            // 自定义提示消息
-            selfIntersectionErrorMessage: '多边形不能自相交，请重新绘制',
-            // 自定义提示回调，可用于自定义UI
+            selfIntersectionErrorMessage: '检测到自相交，已自动回退到上一个点！',
             onSelfIntersectionError: function(message) {
                 const el = document.getElementById('custom-message');
                 el.textContent = message;
@@ -122,22 +233,158 @@
             }
         });
 
-        // 按钮事件
-        const btns = document.querySelectorAll('.btn');
+        // 绘制按钮事件切换
+        const btns = [document.getElementById('btnPolygon'), document.getElementById('btnLine'), document.getElementById('btnPoint')];
+        const hintEl = document.getElementById('modeHint');
+
         btns.forEach(btn => {
-            if (btn.id !== 'btnClear') {
-                btn.onclick = function() {
-                    btns.forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    const mode = this.id === 'btnPolygon' ? 'polygon' :
-                                 this.id === 'btnLine' ? 'linestring' : 'point';
-                    drawTool.setMode(mode);
-                };
-            }
+            btn.onclick = function() {
+                btns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                if (this.id === 'btnPolygon') {
+                    drawTool.setMode('polygon');
+                    hintEl.innerHTML = '<strong>多边形自相交测试：</strong><br>单击落点，第4个点穿过已有边会自动回退；双击完成。';
+                } else if (this.id === 'btnLine') {
+                    drawTool.setMode('linestring');
+                    hintEl.innerHTML = '<strong>折线自相交测试：</strong><br>单击落点，当画出交叉的 X 形线段时会自动回退并提示；双击完成。';
+                } else {
+                    drawTool.setMode('point');
+                    hintEl.innerHTML = '<strong>绘制点：</strong><br>在地图上单击直接添加点标记。';
+                }
+            };
         });
 
         document.getElementById('btnClear').onclick = function() {
             layer.clear();
+        };
+
+        // ==================== 静态脱机检测逻辑 ====================
+
+        const PRESETS = {
+            valid: [
+                [120.48, 31.28],
+                [120.48, 31.32],
+                [120.52, 31.32],
+                [120.52, 31.28],
+                [120.48, 31.28]
+            ],
+            bowtie: [
+                [120.48, 31.28],
+                [120.48, 31.32],
+                [120.52, 31.28],
+                [120.52, 31.32],
+                [120.48, 31.28]
+            ],
+            crossLine: [
+                [120.47, 31.28],
+                [120.53, 31.32],
+                [120.47, 31.32],
+                [120.53, 31.28]
+            ],
+            geojson: {
+                type: "Polygon",
+                coordinates: [
+                    [
+                        [120.48, 31.28],
+                        [120.48, 31.32],
+                        [120.52, 31.28],
+                        [120.52, 31.32],
+                        [120.48, 31.28]
+                    ]
+                ]
+            }
+        };
+
+        const textarea = document.getElementById('staticInput');
+        const resultBox = document.getElementById('staticResult');
+
+        const presetBtns = [
+            { id: 'btnPresetValid', data: PRESETS.valid },
+            { id: 'btnPresetBowtie', data: PRESETS.bowtie },
+            { id: 'btnPresetCrossLine', data: PRESETS.crossLine },
+            { id: 'btnPresetGeoJSON', data: PRESETS.geojson }
+        ];
+
+        // 默认填入合法多边形
+        textarea.value = JSON.stringify(PRESETS.valid, null, 2);
+
+        // 绑定预设按钮点击及 active 切换
+        presetBtns.forEach(item => {
+            const btnEl = document.getElementById(item.id);
+            btnEl.onclick = () => {
+                presetBtns.forEach(p => document.getElementById(p.id).classList.remove('active'));
+                btnEl.classList.add('active');
+                textarea.value = JSON.stringify(item.data, null, 2);
+                resultBox.style.display = 'none';
+                resultBox.innerHTML = '';
+            };
+        });
+
+        // 用户手动输入/修改内容时，取消预设的高亮状态
+        textarea.addEventListener('input', () => {
+            presetBtns.forEach(p => document.getElementById(p.id).classList.remove('active'));
+            resultBox.style.display = 'none';
+        });
+
+        // 执行静态检测
+        document.getElementById('btnRunStaticCheck').onclick = () => {
+            try {
+                const text = textarea.value.trim();
+                if (!text) {
+                    alert('请输入要校验的坐标或 GeoJSON！');
+                    return;
+                }
+                const data = JSON.parse(text);
+
+                // 🌟 调用静态工具方法（无需实例化 DrawTool）
+                const isCross = giserMaptalksDrawTool.isSelfIntersecting(data);
+
+                resultBox.style.display = 'block'; // 🌟 显式设置为 block 展示结果
+                resultBox.className = 'result-box ' + (isCross ? 'invalid' : 'valid');
+                resultBox.innerHTML = isCross
+                    ? '❌ 校验失败：检测到自相交！'
+                    : '✅ 校验成功：合法无自相交！';
+            } catch (err) {
+                resultBox.style.display = 'block'; // 🌟 错误时也正常展示
+                resultBox.className = 'result-box invalid';
+                resultBox.innerHTML = '⚠️ JSON 格式解析错误：' + err.message;
+            }
+        };
+
+        // 在地图上预览此数据
+        document.getElementById('btnPreviewOnMap').onclick = () => {
+            try {
+                const data = JSON.parse(textarea.value.trim());
+                layer.clear();
+                
+                let geom = null;
+                if (data.type) {
+                    // GeoJSON
+                    geom = maptalks.GeoJSON.toGeometry(data);
+                } else if (Array.isArray(data)) {
+                    // 数组坐标
+                    const isClosed = data.length > 2 && data[0][0] === data[data.length - 1][0] && data[0][1] === data[data.length - 1][1];
+                    if (isClosed || data.length > 3) {
+                        geom = new maptalks.Polygon([data]);
+                    } else {
+                        geom = new maptalks.LineString(data);
+                    }
+                }
+
+                if (geom) {
+                    geom.setSymbol({
+                        lineColor: '#e74c3c',
+                        lineWidth: 3,
+                        polygonFill: '#ff7675',
+                        polygonOpacity: 0.4
+                    });
+                    layer.addGeometry(geom);
+                    map.fitExtent(geom.getExtent());
+                }
+            } catch (err) {
+                alert('预览失败: ' + err.message);
+            }
         };
     </script>
 </body>

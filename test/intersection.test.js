@@ -5,6 +5,8 @@ const {
   segmentsIntersect,
   checkRingSelfIntersection,
   checkPolylineSelfIntersection,
+  normalizeCoordinates,
+  isSelfIntersecting,
   orientation,
   onSegment
 } = require('../dist/giser-maptalks-drawtool.cjs.js');
@@ -119,6 +121,50 @@ console.log('🧪 开始运行自动化单元测试...');
   assert.strictEqual(typeof drawTool.endDraw, 'function', '测试 4.6 失败: 必须具备 endDraw 方法');
 
   console.log('  ✅ 4. 类继承与生命周期接口测试通过');
+}
+
+// 5. 静态工具方法与纯数据/GeoJSON 表单校验测试
+{
+  // 5.1 纯数字坐标数组 (非自相交矩形 vs 自相交沙漏)
+  const validCoords = [[0, 0], [0, 2], [2, 2], [2, 0], [0, 0]];
+  const bowtieCoords = [[0, 0], [0, 2], [2, 0], [2, 2], [0, 0]];
+
+  assert.strictEqual(SelfIntersectionDrawTool.isSelfIntersecting(validCoords), false, '测试 5.1 失败: 合法坐标数组误报');
+  assert.strictEqual(SelfIntersectionDrawTool.isSelfIntersecting(bowtieCoords), true, '测试 5.2 失败: 静态方法未能检测出沙漏坐标自相交');
+  assert.strictEqual(isSelfIntersecting(bowtieCoords), true, '测试 5.3 失败: 纯函数未能检测出沙漏坐标自相交');
+
+  // 5.2 GeoJSON Polygon 校验
+  const geojsonValid = {
+    type: 'Polygon',
+    coordinates: [[[120.0, 30.0], [120.1, 30.0], [120.1, 30.1], [120.0, 30.1], [120.0, 30.0]]]
+  };
+  const geojsonBowtie = {
+    type: 'Polygon',
+    coordinates: [[[120.0, 30.0], [120.0, 30.2], [120.2, 30.0], [120.2, 30.2], [120.0, 30.0]]]
+  };
+
+  assert.strictEqual(SelfIntersectionDrawTool.isSelfIntersecting(geojsonValid), false, '测试 5.4 失败: GeoJSON 合法多边形误报');
+  assert.strictEqual(SelfIntersectionDrawTool.isSelfIntersecting(geojsonBowtie), true, '测试 5.5 失败: GeoJSON 沙漏多边形漏检');
+
+  // 5.3 GeoJSON LineString 校验
+  const geojsonLineCross = {
+    type: 'LineString',
+    coordinates: [[0, 0], [2, 2], [0, 2], [2, 0]]
+  };
+  const geojsonLineSafe = {
+    type: 'LineString',
+    coordinates: [[0, 0], [1, 1], [2, 0], [3, 1]]
+  };
+  assert.strictEqual(SelfIntersectionDrawTool.isSelfIntersecting(geojsonLineCross), true, '测试 5.6 失败: GeoJSON 交叉折线漏检');
+  assert.strictEqual(SelfIntersectionDrawTool.isSelfIntersecting(geojsonLineSafe), false, '测试 5.7 失败: GeoJSON 安全折线误报');
+
+  // 5.4 maptalks.Geometry 实例校验
+  const maptalksPoly = new maptalks.Polygon([[[0, 0], [0, 2], [2, 0], [2, 2], [0, 0]]]);
+  const maptalksLine = new maptalks.LineString([[0, 0], [2, 2], [0, 2], [2, 0]]);
+  assert.strictEqual(SelfIntersectionDrawTool.isSelfIntersecting(maptalksPoly), true, '测试 5.8 失败: maptalks Polygon 实例漏检');
+  assert.strictEqual(SelfIntersectionDrawTool.isSelfIntersecting(maptalksLine), true, '测试 5.9 失败: maptalks LineString 实例漏检');
+
+  console.log('  ✅ 5. 静态工具方法与纯数据/GeoJSON 校验测试通过');
 }
 
 console.log('\n🎉 所有测试均已顺利通过！');

@@ -59,34 +59,64 @@ const drawTool = new SelfIntersectionDrawTool({
 </script>
 ```
 
+### 3. 独立纯数据校验（脱离地图实例，用于表单/GeoJSON/导入校验）
+
+支持直接传入 **GeoJSON 对象**、**maptalks Geometry 实例** 或 **原生坐标数组** 进行自相交校验：
+
+```javascript
+import { isSelfIntersecting, SelfIntersectionDrawTool } from 'giser-maptalks-drawtool';
+
+// 方式一：直接使用静态函数
+const isCross = isSelfIntersecting(geoJsonObject);
+
+// 方式二：使用类静态方法
+const isCross2 = SelfIntersectionDrawTool.isSelfIntersecting(coordinatesArray, 'polygon');
+
+// 示例 1: 校验普通坐标数组
+const coords = [[120, 30], [120, 32], [122, 30], [122, 32], [120, 30]];
+console.log(isSelfIntersecting(coords)); // true (沙漏形自相交)
+
+// 示例 2: 校验 GeoJSON Polygon
+const geojson = {
+  type: 'Polygon',
+  coordinates: [[[120, 30], [120, 31], [121, 31], [121, 30], [120, 30]]]
+};
+console.log(isSelfIntersecting(geojson)); // false (合法无相交)
+
+// 示例 3: 校验折线 LineString
+const lineCoords = [[0, 0], [2, 2], [0, 2], [2, 0]];
+console.log(isSelfIntersecting(lineCoords, 'linestring')); // true (交叉折线)
+```
+
 ## 配置选项
 
 | 选项 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | mode | string | null | 绘制模式：polygon, linestring, point 等 |
 | enableSelfIntersectionCheck | boolean | false | 是否启用自相交检测 |
-| selfIntersectionErrorMessage | string | '绘制面出现自相交，请重新绘制' | 自相交时的提示消息 |
+| selfIntersectionErrorMessage | string | '出现自相交，已自动回退到上一个点' | 自相交时的提示消息 |
 | onSelfIntersectionError | function | null | 自相交时的回调函数，可用于自定义提示 UI |
 
 其他选项继承自 [maptalks DrawTool](http://maptalks.org/maptalks.js/api/classes/draw.DrawTool.html)。
 
-## 方法
+## 实例方法与静态方法
 
-| 方法 | 说明 |
-|------|------|
-| addTo(map) | 添加到地图 |
-| remove() | 从地图注销并销毁工具 |
-| setMode(mode) | 设置绘制模式 (polygon, freeHandPolygon, linestring 等) |
-| getMode() | 获取当前模式 |
-| enable() | 启用绘制工具 |
-| disable() | 禁用绘制工具 |
-| undo() | 回退到上一个点 |
-| redo() | 重做 |
-| on(event, handler) | 绑定事件 |
-| off(event, handler) | 解绑事件 |
-| getCurrentGeometry() | 获取当前正在绘制的几何图形 |
-| getCurrentCoordinates() | 获取当前坐标数组 |
-| isSelfIntersecting(coordinates) | 检测坐标是否自相交 |
+| 方法 | 类型 | 说明 |
+|------|------|------|
+| SelfIntersectionDrawTool.isSelfIntersecting(data, mode?) | **静态方法** | 脱离地图校验 GeoJSON、Geometry 或坐标数组是否自相交 |
+| addTo(map) | 实例方法 | 添加到地图 |
+| remove() | 实例方法 | 从地图注销并销毁工具 |
+| setMode(mode) | 实例方法 | 设置绘制模式 (polygon, linestring 等) |
+| getMode() | 实例方法 | 获取当前模式 |
+| enable() | 实例方法 | 启用绘制工具 |
+| disable() | 实例方法 | 禁用绘制工具 |
+| undo() | 实例方法 | 回退到上一个点 |
+| redo() | 实例方法 | 重做 |
+| on(event, handler) | 实例方法 | 绑定事件 |
+| off(event, handler) | 实例方法 | 解绑事件 |
+| getCurrentGeometry() | 实例方法 | 获取当前正在绘制的几何图形 |
+| getCurrentCoordinates() | 实例方法 | 获取当前坐标数组 |
+| isSelfIntersecting(coordinates?) | 实例方法 | 检测坐标或当前绘制图形是否自相交 |
 
 ## 事件
 
